@@ -8,8 +8,17 @@
 
 #include <iostream>
 
+int floor[1000][1000];
+
+using namespace std;
 int main(int argc, const char * argv[]) {
-    // insert code here...
-    std::cout << "Hello, World!\n";
+    int height,width;
+    
+    for (int i = 0; i < height; i++){
+        for (int j = 0; j < width; j++){
+            cin >> floor[i][j] ;
+        }
+    }
+
     return 0;
 }
