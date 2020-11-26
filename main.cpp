@@ -5,14 +5,16 @@
 #include <queue>
 
 using namespace std;
-char floor[1000][1000];
+char floor[1000][1000];//輸入的地圖
 int k =0 ;
-int tree [996005][10]; //index,x,y,right,down,left,up,有無經過,經過次數,經過順序
+int tree [996005][8]; //記錄不是1的index,x,y,right,down,left,up,經過次數
 int height,width,start_index,life;
+queue<int> qu;
 
-bool check(int& ,int& );
-int choose_the_earliest(int);
-void set_four_neighbor();
+bool check(int& ,int& ); //上下左右有無尚未經過的點
+int pass_time_least(int); //經過次數最少次
+void set_four_neighbor(); //上下左右節點紀錄
+void push(int* ,int& ,int& ); //push路徑進去queue
 
 int main(int argc, const char * argv[]) {
     ifstream file(argv[1], ios::in); //讀檔
@@ -26,67 +28,43 @@ int main(int argc, const char * argv[]) {
     }
     set_four_neighbor();
     
-    int route[life+1][2]; //儲存路徑
-    int count = 1;
-    int step=0;
-    route[0][0] = start_index;
+    int route[life+1]; //儲存路徑:點的index
+    int step=0; //紀錄步數
+    
+    route[0] = start_index; //第一步從起點開始
     int vertex = start_index;
-    tree[start_index][7] = 1;
-    queue<int> qu;
-    int r = 1;
+    tree[start_index][7] = 1; //標記起點已走過
+    int r = 1; //路徑從1起始
+    
     bool con=true;
-    while(con==true){
+    
+    
+    while(con){
         bool con=false;
-        if(check(vertex,r)){
-            //cout<<vertex<<"四周點都被經過了"<<endl;
-            vertex = choose_the_earliest(vertex);
-            count = tree[vertex][7]-1;
-            //cout<<"回去點"<<vertex<<endl;
+        if(check(vertex,r)){ //上下左右有無尚未經過的點
+            vertex=pass_time_least(vertex); //上下左右都經過過了-->找經歷次數最少的
         }
-        tree[vertex][7]+=1;
+        tree[vertex][7]+=1; //經過次數+1
+        route[r] = vertex; //紀錄路過的index
+        
         for(int i = 0; i<k;i++){
-            if(tree[i][7]==0){
+            if(tree[i][7]==0){ //任何一個點沒被經過就得繼續while
                 con=true;
                 break;
             }
         }
-        if(con==false){
-            for(int j=1;j<=r;j++){
-                //cout<<route[j][0]<<" ";//<<route[j][1]<<" "<<route[j][2]<<endl;
-                qu.push(route[j][0]);
-                //cout<<tree[route[j][0]][1]<<" "<<tree[route[j][0]][2]<<endl;
-                step+=1;
-            }
-            for(int j=r-1;j>=0;j--){
-                //cout<<route[j][0]<<" ";//<<route[j][1]<<" "<<route[j][2]<<endl;
-                qu.push(route[j][0]);
-                //cout<<tree[route[j][0]][1]<<" "<<tree[route[j][0]][2]<<endl;
-                step+=1;
-            }
-            break;
-        }
-        route[r][0] = vertex;
-        route[r][1] = r*2;
-        if(route[r][1]==life ||route[r][1]==life-1 || con==false){
-            for(int j=1;j<=r;j++){
-                //cout<<route[j][0]<<" ";//<<route[j][1]<<" "<<route[j][2]<<endl;
-                qu.push(route[j][0]);
-                //cout<<tree[route[j][0]][1]<<" "<<tree[route[j][0]][2]<<endl;
-                step+=1;
-            }
-            for(int j=r-1;j>=0;j--){
-                //cout<<route[j][0]<<" ";//<<route[j][1]<<" "<<route[j][2]<<endl;
-                qu.push(route[j][0]);
-                //cout<<tree[route[j][0]][1]<<" "<<tree[route[j][0]][2]<<endl;
-                step+=1;
-            }
+        
+        if(r*2==life ||r*2==life-1){ //走的步數*2接近或等於電池
+            push(&route[0],r,step);
             r=0;
-            count=0;
-            route[0][0] = start_index;
+            route[0] = start_index;
             vertex = start_index;
         }
+        if(!con){ //所有點都被經過過了
+            push(&route[0],r,step);
+            break;
+        }
         r+=1;
-        count+=1;
     }
     fstream file_out;
     file_out.open("final.path", ios::out);
@@ -97,30 +75,34 @@ int main(int argc, const char * argv[]) {
         qu.pop();
         file_out<<tree[e][1]<<" "<<tree[e][2]<<endl;
     }
-    
     return 0;
+}
+void push(int* route,int &r,int &step){
+    for(int j=1;j<=r;j++){
+        qu.push(route[j]); //印出此趟路徑去程
+        step+=1;
+    }
+    for(int j=r-1;j>=0;j--){
+        qu.push(route[j]); //印出此趟路徑回程
+        step+=1;
+    }
 }
 
 bool check(int &v,int &r){
-    for(int i = 3; i < 7; i++){
-        //cout<<"看"<<v<<"的上下左右"<<endl;
-        if(tree[v][i] != -1){
-            if(tree[tree[v][i]][7] == 0){
-                //cout<<tree[v][i]<<"尚未被經過"<<endl;
-                tree[tree[v][i]][7] +=1;
-                //cout<<"令"<<tree[v][i]<<"為新的起點"<<endl;
-                v = tree[v][i];
+    for(int i = 3; i < 7; i++){ //檢查node的上下左右
+        if(tree[v][i] != -1){ //如果此方位有路
+            if(tree[tree[v][i]][7] == 0){ //如果沒有被經過過
+                v = tree[v][i]; //vertex改由此點開始
                 return false;
             }
         }
     }
-    return true;
+    return true; //上下左右都經過過
 }
-int choose_the_earliest(int v){
+int pass_time_least(int v){
     int min_7 = 99999999;
-    int min_index_7;
-    for(int i = 3; i < 7; i++){
-        //cout<<"看"<<v<<"的上下左右"<<endl;
+    int min_index_7 = 0;
+    for(int i = 3; i < 7; i++){//上下左右經過次數
         if(tree[v][i] != -1){
             if(tree[tree[v][i]][7]<min_7){
                     min_7 = tree[tree[v][i]][7];
@@ -129,23 +111,23 @@ int choose_the_earliest(int v){
             }
         }
     }
-    return tree[v][min_index_7];
+    return tree[v][min_index_7]; //回傳最少經過的node的index
 }
 void set_four_neighbor(){
     for (int i = 0; i < height; i++){
         for (int j = 0; j < width; j++){
-            if(floor[i][j] != '1'){
-                tree[k][0] = k;
-                tree[k][1] = i;
-                tree[k][2] = j;
+            if(floor[i][j] != '1'){ //將不是1的記錄到tree
+                tree[k][0] = k; //編號
+                tree[k][1] = i; //x座標
+                tree[k][2] = j; //y座標
                 if(floor[i][j+1] != '1'){
-                    tree[k][3] = k+1; //右邊一個node的index
+                    tree[k][3] = k+1; //右邊node的index
                 }
                 else{
                     tree[k][3] = -1;
                 }
                 if(floor[i][j-1] != '1'){
-                    tree[k][5] = k-1;
+                    tree[k][5] = k-1; //左邊node的index
                 }
                 else{
                     tree[k][5] = -1;
@@ -153,16 +135,14 @@ void set_four_neighbor(){
                 if(floor[i][j] == 'R'){
                     start_index = k;
                 }
-                tree[k][7]=0;
-                tree[k][8]=0;
-                tree[k][9]=0;
+                tree[k][7]=0; //有無次數
                 k+=1;
             }
         }
     }
     for (int i = 0; i < k; i++){
-        if(tree[i][1] == height-2){
-            tree[i][4] = -1;
+        if(tree[i][1] == height-2){ //最下排node
+            tree[i][4] = -1; //下方node的index
         }
         else if(floor[tree[i][1]+1][tree[i][2]] != '1'){
             for(int l = i+1; l <= i+width-2;l++){
@@ -177,11 +157,11 @@ void set_four_neighbor(){
         else{
             tree[i][4] = -1;
         }
-        if(tree[i][1] == 1){
-            tree[i][6] = -1;
+        if(tree[i][1] == 1){ //最上排node
+            tree[i][6] = -1; //上方node的index
         }
         else if(floor[tree[i][1]-1][tree[i][2]] != '1'){
-            for(int l = i-1; l >= i-width+2; l--){ //兩側1可扣：待更
+            for(int l = i-1; l >= i-width+2; l--){
                 if((tree[l][1] == tree[i][1]-1) && (tree[l][2] == tree[i][2])){
                     tree[i][6] = l;
                     break;
